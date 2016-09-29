@@ -1,51 +1,42 @@
 package main
 
 import (
-	"bufio"
-
 	"net/http"
-	"os"
-	"strings"
+	"text/template"
 )
 
 func main() {
-	http.Handle("/", new(MyHandler))
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content Type", "text/html")
+		tmpl, err := template.New("test").Parse(doc)
+		if err == nil {
+			context := Context{
+				[3]string{"Lemon", "Orange", "Apple"},
+				"the title",
+			}
 
+			tmpl.Execute(w, context)
+		}
+	})
 	http.ListenAndServe(":8000", nil)
 
 }
 
-type MyHandler struct {
-	http.Handler
-}
+const doc = `
+<!DOCTYPE html>
+<html>
+	<head><title>{{.Title}}</title></head>
+	<body>
+		<h1>List of Fruit</h1>
+		<ul>
+		{{range .Fruit}}
+			<li>{{.}}</li>
+		{{end}}
+	</body>
+</html>
+`
 
-func (this *MyHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	path := "public/" + req.URL.Path
-	f, err := os.Open(path)
-
-	if err == nil {
-		bufferedReader := bufio.NewReader(f)
-		var contentType string
-
-		if strings.HasSuffix(path, ".css") {
-			contentType = "text/css"
-		} else if strings.HasSuffix(path, ".html") {
-			contentType = "text/html"
-		} else if strings.HasSuffix(path, ".js") {
-			contentType = "application/javascript"
-		} else if strings.HasSuffix(path, ".png") {
-			contentType = "image/png"
-		} else if strings.HasSuffix(path, ".mp4") {
-			contentType = "video/mp4"
-		} else {
-			contentType = "text/plain"
-		}
-
-		w.Header().Add("Content Type", contentType)
-
-		bufferedReader.WriteTo(w)
-	} else {
-		w.WriteHeader(404)
-		w.Write([]byte("4004 - " + http.StatusText(404)))
-	}
+type Context struct {
+	Fruit [3]string
+	Title string
 }
